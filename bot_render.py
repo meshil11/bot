@@ -5,50 +5,66 @@ import json
 from collections import deque
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, MessageHandler, CommandHandler,
-    CallbackQueryHandler, filters, ContextTypes
+    ApplicationBuilder,
+    MessageHandler,
+    CommandHandler,
+    CallbackQueryHandler,
+    filters,
+    ContextTypes
 )
 
-# استخدام متغير البيئة لتوكن البوت
-CHANNEL_USERNAME = '@flor3a1'
+# توكن البوت (يمكن وضعه في متغير بيئة أو هنا مباشرة)
+BOT_TOKEN = "8058484352:AAF4q3TTYtPGbXsflSmqF2gc60YsOOv4z8Q"
+CHANNEL_USERNAME = '@flor3a1'  # اسم القناة الإجبارية
 
-# ملفات البيانات
+# ملفات لتخزين الإحصاءات
 STATS_FILE = 'stats.json'
 USERS_FILE = 'users.json'
 BANNED_FILE = 'banned.json'
 
-# متغيرات
+# متغيرات لتخزين البيانات
 user_platforms = {}
 subscribers_count = set()
 download_count = 0
 user_ids = set()
 invalid_attempts = {}
 banned_users = set()
-recent_downloads = deque(maxlen=5)
+recent_downloads = deque(maxlen=5)  # آخر 5 تنزيلات
+
 
 def load_stats():
+    """تحميل الإحصاءات من الملفات"""
     global subscribers_count, download_count, user_ids, banned_users
+
     if os.path.exists(STATS_FILE):
         with open(STATS_FILE, 'r') as f:
             data = json.load(f)
             subscribers_count.update(data.get("subscribers", []))
             download_count = data.get("downloads", 0)
+
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'r') as f:
             user_ids.update(json.load(f).get("users", []))
+
     if os.path.exists(BANNED_FILE):
         with open(BANNED_FILE, 'r') as f:
             banned_users.update(json.load(f))
 
+
 def save_stats():
+    """حفظ الإحصاءات في الملفات"""
     with open(STATS_FILE, 'w') as f:
         json.dump({"subscribers": list(subscribers_count), "downloads": download_count}, f)
+
     with open(USERS_FILE, 'w') as f:
         json.dump({"users": list(user_ids)}, f)
+
     with open(BANNED_FILE, 'w') as f:
         json.dump(list(banned_users), f)
 
-async def check_subscription(user_id, bot, context):
+
+async def check_subscription(user_id, bot):
+    """التأكد من أن المستخدم مشترك في القناة"""
     try:
         member = await bot.get_chat_member(chat_id=CHANNEL_USERNAME, user_id=user_id)
         if member.status in ['member', 'administrator', 'creator']:
@@ -57,19 +73,27 @@ async def check_subscription(user_id, bot, context):
                 save_stats()
             return True
         return False
-    except:
+    except Exception:
         return False
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة الأمر /start"""
     user_id = update.effective_user.id
     if user_id not in user_ids:
         user_ids.add(user_id)
         save_stats()
-    is_subscribed = await check_subscription(user_id, context.bot, context)
+
+    is_subscribed = await check_subscription(user_id, context.bot)
+
     if not is_subscribed:
-        keyboard = [[InlineKeyboardButton("🔔 انضم للقناة", url=f'https://t.me/{CHANNEL_USERNAME[1:]}')]]
-        await update.message.reply_text(f"⚠️ يجب الاشتراك في القناة أولاً: {CHANNEL_USERNAME}", reply_markup=InlineKeyboardMarkup(keyboard))
+        keyboard = [[InlineKeyboardButton("🔔 انضم للقناة", url=f'https://t.me/{CHANNEL_USERNAME[1:]}')]] 
+        await update.message.reply_text(
+            f"⚠️ يجب عليك الاشتراك في القناة أولاً: {CHANNEL_USERNAME}",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
         return
+
     keyboard = [
         [InlineKeyboardButton("🎥 TikTok", callback_data='tiktok')],
         [InlineKeyboardButton("🎬 YouTube", callback_data='youtube')],
@@ -77,14 +101,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text("اختر المنصة التي تريد التنزيل منها:", reply_markup=InlineKeyboardMarkup(keyboard))
 
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة الأزرار بعد اختيار المنصة"""
     query = update.callback_query
     await query.answer()
     platform = query.data
     user_platforms[query.from_user.id] = platform
     await query.edit_message_text(text=f"✅ تم اختيار {platform.capitalize()} كمصدر للتحميل.")
 
+
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """معالجة رابط التنزيل"""
     global download_count
     url = update.message.text.strip()
     user_id = update.effective_user.id
@@ -93,15 +121,16 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🚫 تم حظرك.")
         return
 
-    if not await check_subscription(user_id, context.bot, context):
+    if not await check_subscription(user_id, context.bot):
         await update.message.reply_text("⚠️ اشترك في القناة أولًا.")
         return
 
     if user_id not in user_platforms:
-        await update.message.reply_text("❗ استخدم /start لاختيار المنصة.")
+        await update.message.reply_text("❗ استخدم الأمر /start لاختيار المنصة.")
         return
 
     platform = user_platforms[user_id]
+
     patterns = {
         "tiktok": r'tiktok\.com',
         "youtube": r'youtube\.com|youtu\.be|youtube\.com/shorts',
@@ -113,12 +142,13 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if invalid_attempts[user_id] >= 3:
             banned_users.add(user_id)
             save_stats()
-            await update.message.reply_text("🚫 تم حظرك بسبب تكرار الأخطاء.")
+            await update.message.reply_text("🚫 تم حظرك بسبب إرسال روابط غير صحيحة.")
         else:
             await update.message.reply_text("❌ الرابط غير صحيح.")
         return
 
     await update.message.reply_text("⏳ جاري التحميل...")
+
     try:
         from yt_dlp import YoutubeDL
         ydl_opts = {
@@ -144,16 +174,24 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f.write(f"{platform}: {url}\n")
 
     except Exception as e:
-        await update.message.reply_text(f"❌ خطأ: {e}")
+        await update.message.reply_text(f"❌ خطأ أثناء التنزيل: {e}")
+
 
 async def main():
+    """تشغيل البوت"""
     load_stats()
+    if not BOT_TOKEN or BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
+        print("❌ لم يتم تحديد توكن البوت!")
+        return
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler, pattern="^(tiktok|youtube|instagram)$"))
     app.add_handler(MessageHandler(filters.Regex(re.compile(r'https?://', re.IGNORECASE)), download_video))
+
     print("✅ البوت يعمل الآن...")
     await app.run_polling()
+
 
 if __name__ == '__main__':
     asyncio.run(main())
