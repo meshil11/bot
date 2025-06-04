@@ -10,7 +10,6 @@ from telegram.ext import (
 )
 
 # استخدام متغير البيئة لتوكن البوت
-BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_USERNAME = '@flor3a1'
 
 # ملفات البيانات
