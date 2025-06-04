@@ -9,11 +9,9 @@ from telegram.ext import (
     CallbackQueryHandler, filters, ContextTypes
 )
 
-# إعدادات البوت
-BOT_TOKEN = '8058484352:AAF4q3TTYtPGbXsflSmqF2gc60YsOOv4z8Q'
-ADMIN_ID = 7604170763
+# استخدام متغير البيئة لتوكن البوت
+BOT_TOKEN = os.getenv("8058484352:AAF4q3TTYtPGbXsflSmqF2gc60YsOOv4z8Q")
 CHANNEL_USERNAME = '@flor3a1'
-
 # ملفات البيانات
 STATS_FILE = 'stats.json'
 USERS_FILE = 'users.json'
