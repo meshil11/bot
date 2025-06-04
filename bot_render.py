@@ -14,7 +14,7 @@ from telegram.ext import (
 from collections import deque
 
 # إعدادات البوت
-BOT_TOKEN = '8058484352:AAF4q3TTYtPGbXsflSmqF2gc60YsOOv4z8Q'
+BOT_TOKEN = '805884352:AAF4q3TTYtPGbXsflSmqF2gc60YsOOv4z8Q'
 ADMIN_ID = 7604170763
 CHANNEL_USERNAME = '@flor3a1'
 ADMIN_PASSWORD = "admin123"
