@@ -10,8 +10,9 @@ from telegram.ext import (
 )
 
 # استخدام متغير البيئة لتوكن البوت
-BOT_TOKEN = os.getenv("8058484352:AAF4q3TTYtPGbXsflSmqF2gc60YsOOv4z8Q")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_USERNAME = '@flor3a1'
+
 # ملفات البيانات
 STATS_FILE = 'stats.json'
 USERS_FILE = 'users.json'
