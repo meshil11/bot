@@ -1,0 +1,7 @@
+services:
+  - type: worker
+    name: telegram-video-bot
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python3 bot_render.py"
